@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🧬 ГЕНЕЗИС — создай жизнь</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #060b10; --panel: #0d1820; --line: #1c3340;
+    --cyan: #4fc3f7; --green: #3fbf66; --blue: #4fa3e0;
+    --purple: #b07df0; --gold: #e0c04f; --red: #ff5577; --txt: #c8e4f0;
+    --cell: clamp(34px, 11vw, 52px);
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 50% -10%, #14283a, var(--bg) 70%);
+    color: var(--txt); min-height: 100dvh; padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; align-items: center;
+    overflow-x: hidden; touch-action: manipulation;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, #00000022 3px 4px);
+    z-index: 999; opacity: .25;
+  }
+
+  header { text-align: center; margin-bottom: 8px; width: 100%; }
+  h1 { font-size: clamp(1.15rem, 5vw, 1.6rem); letter-spacing: 2px; color: #8fe3ff;
+       text-shadow: 0 0 20px #4fc3f7, 0 0 40px #4fc3f766; }
+  .sub { font-size: clamp(.55rem, 2.4vw, .7rem); color: #5a7a8a; letter-spacing: 1.5px; margin-top: 2px; }
+
+  .topbar { display: flex; gap: 5px; margin-bottom: 8px; width: 100%; max-width: 640px;
+            overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; justify-content: center; }
+  .topbar::-webkit-scrollbar { display: none; }
+  .tab { flex: 0 0 auto; font-size: clamp(.6rem, 2.6vw, .72rem); padding: 7px 12px;
+         border-radius: 20px; cursor: pointer; border: 1px solid var(--line);
+         background: #0a151d; color: #6a8a9a; transition: .15s; letter-spacing: .5px;
+         white-space: nowrap; }
+  .tab.active { border-color: var(--cyan); color: #8fe3ff; background: #10222e;
+                box-shadow: 0 0 12px #4fc3f744; }
+
+  .panel { width: 100%; max-width: 640px; display: none; flex-direction: column; align-items: center; }
+  .panel.active { display: flex; }
+
+  .hud { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+         margin-bottom: 6px; width: 100%; }
+  .hud.evo { grid-template-columns: repeat(3, 1fr); }
+  .stat { background: var(--panel); border: 1px solid #24404f; border-radius: 9px;
+          padding: 5px 4px; font-size: clamp(.55rem, 2.3vw, .68rem); text-align: center;
+          color: #6a8a9a; line-height: 1.2; }
+  .stat b { display: block; font-size: clamp(.9rem, 4vw, 1.05rem); color: #7fe0ff; margin-top: 1px; }
+  .stat.warn b { color: #ff8a65; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .5; } }
+
+  .params { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 4px; margin-bottom: 6px; }
+  .pbar { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+          padding: 4px 6px; font-size: clamp(.55rem, 2.2vw, .68rem); }
+  .pbar .top { display: flex; justify-content: space-between; margin-bottom: 2px;
+               align-items: center; gap: 2px; }
+  .pbar .top b { color: #7fe0ff; font-size: clamp(.65rem, 2.8vw, .8rem); }
+  .pbar .top .need { color: #5a7a8a; font-size: clamp(.5rem, 2vw, .62rem); }
+  .pbar .track { height: 4px; background: #050c12; border-radius: 4px; overflow: hidden; }
+  .pbar .fill { height: 100%; width: 0%; transition: width .35s ease; border-radius: 4px; }
+  .pbar.done { border-color: var(--green); box-shadow: 0 0 8px #3fbf6644; }
+
+  .energybar { height: 6px; background: #050c12; border-radius: 6px; overflow: hidden;
+               width: 100%; margin-bottom: 8px; border: 1px solid var(--line); }
+  .energybar i { display: block; height: 100%; border-radius: 6px;
+                 background: linear-gradient(90deg,#1e88e5,#4fc3f7,#8fe3ff);
+                 transition: width .35s ease; box-shadow: 0 0 10px #4fc3f7aa; }
+
+  .board-wrap { width: 100%; display: flex; justify-content: center; margin-bottom: 8px; }
+  #board { display: grid; gap: clamp(3px, .8vw, 5px); padding: clamp(8px, 2.5vw, 14px);
+           background: radial-gradient(circle at 50% 50%, #0a1a24, #050d13);
+           border-radius: 50%; border: 2px solid #12222e;
+           box-shadow: inset 0 0 60px #000, 0 0 40px #0a1a2433; position: relative;
+           grid-template-columns: repeat(7, var(--cell)); }
+  #board::after {
+    content: ''; position: absolute; inset: 6px; border-radius: 50%;
+    pointer-events: none; background: linear-gradient(135deg, #ffffff08, transparent 40%);
+  }
+  .cell { width: var(--cell); height: var(--cell); border-radius: clamp(5px, 1.5vw, 8px);
+          display: flex; align-items: center; justify-content: center;
+          font-size: clamp(.8rem, 3.5vw, 1.15rem);
+          cursor: pointer; user-select: none; transition: .12s;
+          background: #0a161e; border: 1px solid #162934; color: #2a4552;
+          position: relative; }
+  .cell.locked { background: #060e14; border-color: #0e1a22; color: #152630; cursor: not-allowed; }
+  .cell.openable { border-color: #2d6a8a; color: #4a7a94; }
+  .cell.openable:hover { transform: scale(1.08); background: #12232f;
+                         box-shadow: 0 0 14px #2d8aba66; z-index: 2; }
+  .cell.hint-type { color: #3a5a6a; font-size: clamp(.65rem, 2.8vw, .9rem); }
+  .cell.pop { animation: pop .3s ease; }
+  @keyframes pop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  .cell.nutri { background: #14331f; border-color: var(--green); color: #fff; }
+  .cell.struct { background: #14304a; border-color: var(--blue); color: #fff; }
+  .cell.nerve { background: #2e1445; border-color: var(--purple); color: #fff; }
+  .cell.reg { background: #3a3210; border-color: var(--gold); color: #fff; }
+  .cell.mutagen { background: #401018; border-color: var(--red); color: #fff;
+                  animation: pulse 1.1s infinite; }
+  .cell.dead { background: #151515; border-color: #333; color: #666; }
+  .cell.core { border: 2px solid #8fe3ff; box-shadow: 0 0 20px #4fc3f7cc; background: #0e2a3a; }
+  .cell.shake { animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+  @keyframes pulse { 50% { box-shadow: 0 0 16px #ff5577aa; } }
+
+  .controls { display: flex; gap: 6px; margin-bottom: 8px; width: 100%; flex-wrap: wrap; justify-content: center; }
+  button { font-family: inherit; font-size: clamp(.65rem, 2.8vw, .78rem);
+           padding: clamp(9px, 2.5vw, 12px) clamp(12px, 3.5vw, 18px);
+           border-radius: 10px; border: 1px solid #2d6a8a; background: #103042; color: #a8e4ff;
+           cursor: pointer; transition: .15s; letter-spacing: .4px; min-height: 40px;
+           flex: 1 1 auto; max-width: 200px; white-space: nowrap; }
+  button:hover:not(:disabled) { background: #1a557a; box-shadow: 0 0 14px #2d8aba66; }
+  button:active:not(:disabled) { transform: scale(.96); }
+  button:disabled { opacity: .3; cursor: not-allowed; }
+  button.danger { border-color: #8a2d3a; background: #3a1218; color: #ffa8b8; }
+  button.ghost { border-color: var(--line); background: transparent; color: #6a8a9a; }
+
+  .log { width: 100%; height: clamp(70px, 18vw, 100px); overflow-y: auto;
+         background: #050d13; border: 1px solid var(--line); border-radius: 10px;
+         padding: 6px 10px; font-size: clamp(.58rem, 2.3vw, .7rem);
+         line-height: 1.6; font-family: 'Consolas', monospace; -webkit-overflow-scrolling: touch; }
+  .log div { color: #5a8a9a; }
+  .log .good { color: #7fe08f; }
+  .log .bad { color: #ff7788; }
+  .log .info { color: #e0c04f; }
+  .log .big { color: #8fe3ff; font-weight: bold; }
+
+  .modal-bg { position: fixed; inset: 0; background: #000b; backdrop-filter: blur(6px);
+              display: none; align-items: center; justify-content: center;
+              padding: 12px; z-index: 100; overflow-y: auto; }
+  .modal-bg.show { display: flex; }
+  .modal { background: linear-gradient(160deg, #12242f, #060d13); border: 1px solid #2d6a8a;
+           border-radius: 18px; padding: clamp(16px, 4vw, 24px);
+           max-width: 420px; width: 100%; text-align: center;
+           box-shadow: 0 0 80px #000, 0 0 40px #2d6a8a44; animation: pop .35s ease;
+           max-height: 92dvh; overflow-y: auto; }
+  .modal h2 { font-size: clamp(1.1rem, 4.5vw, 1.35rem); margin-bottom: 6px; color: #8fe3ff; }
+  .modal .emoji { font-size: clamp(2.4rem, 10vw, 3.2rem); margin-bottom: 8px;
+                  filter: drop-shadow(0 0 16px #4fc3f7aa); }
+  .modal p { font-size: clamp(.72rem, 3vw, .82rem); color: #9ab8c8;
+             line-height: 1.55; margin-bottom: 8px; white-space: pre-line; }
+  .modal .score { font-size: clamp(1.3rem, 6vw, 1.8rem); color: var(--gold);
+                  margin: 8px 0 4px; font-weight: bold; text-shadow: 0 0 20px #e0c04f88; }
+  .modal .rank { font-size: clamp(.72rem, 3vw, .85rem); color: #7fe0ff; margin-bottom: 12px; }
+  .modal .mult { font-size: clamp(.7rem, 2.8vw, .8rem); color: var(--green); margin-bottom: 8px; }
+  .modal button { width: 100%; max-width: none; margin-top: 6px; }
+
+  .legend { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+            font-size: clamp(.52rem, 2.2vw, .62rem); color: #5a7a8a; margin-bottom: 6px; width: 100%; }
+  .legend span::before { content: '■ '; }
+  .hint { font-size: clamp(.55rem, 2.3vw, .68rem); color: #5a7a8a; margin-bottom: 6px;
+          text-align: center; width: 100%; line-height: 1.4; }
+
+  .collection { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(64px, 18vw, 84px),1fr));
+                gap: 5px; max-height: calc(100dvh - 180px); overflow-y: auto; padding: 2px;
+                width: 100%; -webkit-overflow-scrolling: touch; }
+  .col-item { background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+              padding: 7px 3px; text-align: center; font-size: clamp(.5rem, 2vw, .6rem);
+              color: #4a6a7a; line-height: 1.2; }
+  .col-item .e { font-size: clamp(1.1rem, 5vw, 1.4rem); display: block; margin-bottom: 2px;
+                 filter: grayscale(1) brightness(.4); }
+  .col-item.found { border-color: #2d6a8a; color: #9ab8c8; }
+  .col-item.found .e { filter: none; }
+  .col-item.found.rare { border-color: var(--gold); box-shadow: 0 0 10px #e0c04f33; }
+
+  .achievements { display: flex; flex-direction: column; gap: 5px;
+                  max-height: calc(100dvh - 180px); overflow-y: auto; width: 100%;
+                  -webkit-overflow-scrolling: touch; }
+  .ach { background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+         padding: 8px 10px; font-size: clamp(.62rem, 2.6vw, .74rem);
+         display: flex; justify-content: space-between; align-items: center; gap: 8px;
+         color: #6a8a9a; line-height: 1.3; }
+  .ach.done { border-color: var(--green); color: #9ae0a8; }
+  .ach .tick { color: var(--green); font-size: 1.1rem; flex-shrink: 0; }
+
+  .best { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 14px; font-size: clamp(.72rem, 3vw, .8rem); line-height: 1.8;
+          width: 100%; }
+  .best b { color: var(--gold); }
+
+  /* очень узкие экраны */
+  @media (max-width: 360px) {
+    :root { --cell: clamp(30px, 10.5vw, 42px); }
+    .params { grid-template-columns: repeat(2, 1fr); }
+    .pbar .top { font-size: .55rem; }
+  }
+  /* ландшафт на телефоне */
+  @media (max-height: 500px) and (orientation: landscape) {
+    :root { --cell: clamp(28px, 6vh, 40px); }
+    body { padding: 4px 6px; }
+    header { margin-bottom: 2px; }
+    h1 { font-size: 1rem; }
+    .sub { display: none; }
+    .hud, .params, .legend, .hint { margin-bottom: 3px; }
+    .log { height: 50px; }
+    #board { border-radius: 20%; padding: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧬 ГЕНЕЗИС</h1>
+  <div class="sub">ЛАБОРАТОРИЯ ТВОРЦА</div>
+</header>
+
+<div class="topbar">
+  <div class="tab active" data-tab="game">🧪 Игра</div>
+  <div class="tab" data-tab="collection">📖 Коллекция</div>
+  <div class="tab" data-tab="ach">🎖️ Достижения</div>
+  <div class="tab" data-tab="best">🏆 Рекорд</div>
+  <div class="tab" data-tab="settings">⚙️</div>
+</div>
+
+<!-- ===== ИГРА ===== -->
+<div class="panel active" id="panel-game">
+  <div class="hud" id="hud">
+    <div class="stat">⚡ Топливо<b id="hEnergy">130</b></div>
+    <div class="stat">🔄 Ходы<b id="hMoves">16</b></div>
+    <div class="stat">🦠 Мутации<b id="hMut">0</b></div>
+    <div class="stat" id="hRoundBox" style="display:none">🌳 Раунд<b id="hRound">1/3</b></div>
+    <div class="stat" id="hScoreBox">🏅 Очки<b id="hScore">0</b></div>
+  </div>
+
+  <div class="params">
+    <div class="pbar" id="pb-energy"><div class="top"><span>⚡</span><span><b>0</b>/<span class="need">28</span></span></div><div class="track"><div class="fill" style="background:var(--green)"></div></div></div>
+    <div class="pbar" id="pb-struct"><div class="top"><span>🦴</span><span><b>0</b>/<span class="need">22</span></span></div><div class="track"><div class="fill" style="background:var(--blue)"></div></div></div>
+    <div class="pbar" id="pb-nerve"><div class="top"><span>🧠</span><span><b>0</b>/<span class="need">18</span></span></div><div class="track"><div class="fill" style="background:var(--purple)"></div></div></div>
+    <div class="pbar" id="pb-reg"><div class="top"><span>⚖️</span><span><b>0</b>/<span class="need">14</span></span></div><div class="track"><div class="fill" style="background:var(--gold)"></div></div></div>
+  </div>
+
+  <div class="energybar"><i id="energyBar" style="width:100%"></i></div>
+
+  <div class="legend">
+    <span style="color:var(--green)">Питание</span>
+    <span style="color:var(--blue)">Структура</span>
+    <span style="color:var(--purple)">Нерв</span>
+    <span style="color:var(--gold)">Регулятор</span>
+    <span style="color:var(--red)">Мутаген</span>
+    <span style="color:#555">Мёртвая</span>
+  </div>
+
+  <div class="hint">Иконка на «?» — тип клетки. 3 клетки одного цвета подряд дают бонус.</div>
+
+  <div class="board-wrap"><div id="board"></div></div>
+
+  <div class="controls">
+    <button id="btnPass">⏳ Пас +3</button>
+    <button id="btnRestart" class="danger">🔄 Заново</button>
+    <button id="btnEvo" class="ghost">🌳 Эволюция</button>
+  </div>
+
+  <div class="log" id="log"></div>
+</div>
+
+<!-- ===== КОЛЛЕКЦИЯ ===== -->
+<div class="panel" id="panel-collection">
+  <div class="hint" id="colProgress">Открыто: 0 / 0</div>
+  <div class="collection" id="collection"></div>
+</div>
+
+<!-- ===== ДОСТИЖЕНИЯ ===== -->
+<div class="panel" id="panel-ach">
+  <div class="achievements" id="achList"></div>
+</div>
+
+<!-- ===== РЕКОРД ===== -->
+<div class="panel" id="panel-best">
+  <div class="best" id="bestBox">Пока нет рекордов. Сыграй партию!</div>
+</div>
+
+<!-- ===== НАСТРОЙКИ ===== -->
+<div class="panel" id="panel-settings">
+  <div class="best">
+    <label style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
+      <span>🔊 Звук</span>
+      <input type="checkbox" id="optSound" checked style="width:22px;height:22px;">
+    </label>
+    <label style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; gap:10px;">
+      <span>👁️ Показывать тип клетки</span>
+      <input type="checkbox" id="optHint" checked style="width:22px;height:22px;flex-shrink:0;">
+    </label>
+    <div style="margin-top:12px; display:flex;">
+      <button class="danger" id="btnWipe" style="max-width:none;width:100%">🗑️ Стереть прогресс</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== МОДАЛКА ===== -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="emoji" id="mEmoji">🧬</div>
+    <h2 id="mTitle">Исход</h2>
+    <p id="mDesc"></p>
+    <div class="mult" id="mMult"></div>
+    <div class="score" id="mScore">0</div>
+    <div class="rank" id="mRank"></div>
+    <button id="mBtn">Продолжить</button>
+  </div>
+</div>
+
+<script>
+// ==================== ДАННЫЕ ====================
+const TYPES = {
+  nutri:   { icon:'🟢', cost:8,  css:'nutri',   key:'energy', gain:12, hint:'🟢' },
+  struct:  { icon:'🔵', cost:8,  css:'struct',  key:'struct', gain:10, hint:'🔵' },
+  nerve:   { icon:'🟣', cost:12, css:'nerve',   key:'nerve',  gain:9,  hint:'🟣' },
+  reg:     { icon:'🟡', cost:6,  css:'reg',     key:'reg',    gain:8,  hint:'🟡' },
+  mutagen: { icon:'🔴', cost:10, css:'mutagen', hint:'🔴' },
+  dead:    { icon:'⚫', cost:4,  css:'dead',    hint:'⚫' }
+};
+const NEEDS = { energy:28, struct:22, nerve:18, reg:14 };
+
+const OUTCOMES = [
+  { c:p=>p.energy>=60&&p.struct>=40&&p.nerve>=30, e:'🐉', n:'Дракон', d:'Легендарная форма жизни!', s:450, rare:1 },
+  { c:p=>p.nerve>=50&&p.reg>=45, e:'🔮', n:'Предсказатель', d:'Организм видит будущее.', s:440, rare:1 },
+  { c:p=>p.nerve>=50&&p.reg>=40, e:'👼', n:'Ангел', d:'Чистое сознание в теле.', s:380, rare:1 },
+  { c:p=>p.energy>=55&&p.mutagens>=2, e:'😈', n:'Демон', d:'Сила из тьмы мутаций.', s:420, rare:1 },
+  { c:p=>p.reg>=45&&p.nerve>=35, e:'🧚', n:'Фея', d:'Хрупкая, но совершенная.', s:350, rare:1 },
+  { c:p=>p.energy>=70&&p.nerve>=30, e:'🌟', n:'Звёздная форма', d:'Жизнь из звёздной пыли.', s:390, rare:1 },
+  { c:p=>p.energy>=75&&p.nerve>=40, e:'🌌', n:'Космическая', d:'Организм космического масштаба.', s:490, rare:1 },
+  { c:p=>p.energy>=65&&p.reg>=30, e:'☀️', n:'Солнечная форма', d:'Питается светом звезды.', s:320, rare:1 },
+  { c:p=>p.reg>=35&&p.energy<20, e:'🌙', n:'Ночная жизнь', d:'Живёт во тьме.', s:280, rare:1 },
+  { c:p=>p.energy>=55&&p.reg>=35, e:'⚡', n:'Сверхпроводник', d:'Энергия течёт идеально.', s:130 },
+  { c:p=>p.nerve>=55, e:'🧿', n:'Всевидящий', d:'Разум без границ.', s:410, rare:1 },
+  { c:p=>p.reg>=50&&p.energy>=60, e:'♾️', n:'Бессмертный', d:'Смерть побеждена.', s:520, rare:1 },
+  { c:p=>p.all>=45, e:'🧬', n:'Прародитель', d:'Начало нового древа жизни.', s:550, rare:1 },
+  { c:p=>p.nerve>=45&&p.struct>=45, e:'👑', n:'Владыка', d:'Сила и разум в одном.', s:430, rare:1 },
+  { c:p=>p.all===50, e:'🦠', n:'Абсолют', d:'Идеальное творение.', s:600, rare:1 },
+  { c:p=>p.nerve>=60&&p.struct<10, e:'🪬', n:'Дух', d:'Разум без плоти.', s:350, rare:1 },
+  { c:p=>p.energy>=65, e:'🔥', n:'Термофил', d:'Живёт в экстремальном жаре.', s:145 },
+  { c:p=>p.struct>=55, e:'🪨', n:'Минеральная форма', d:'Кристаллическая жизнь.', s:85 },
+  { c:p=>p.reg>=45&&p.energy>=30, e:'🌊', n:'Текущая форма', d:'Жидкая, но живая.', s:100 },
+  { c:p=>p.energy>=70&&p.struct<10, e:'🌪️', n:'Газообразная', d:'Жизнь-облако.', s:70 },
+  { c:p=>p.energy>=65, e:'💠', n:'Плазмоид', d:'Сгусток чистой энергии.', s:130 },
+  { c:p=>p.mutagens>=3, e:'🐙', n:'Многорукий', d:'Мутации создали чудо.', s:200 },
+  { c:p=>p.energy>=50, e:'⚡', n:'Энергетический сгусток', d:'Чистая энергия жизни.', s:140 },
+  { c:p=>p.struct>=40, e:'💪', n:'Сверхвыносливый', d:'Броня вместо тела.', s:150 },
+  { c:p=>p.nerve>=40, e:'🧠', n:'Разумный организм', d:'Мыслит и осознаёт.', s:160 },
+  { c:p=>p.all>=30&&p.all<=40, e:'⚖️', n:'Идеальный баланс', d:'Всё в гармонии.', s:200 },
+  { c:p=>p.energy>=40&&p.struct>=30, e:'🦅', n:'Хищник', d:'Венец эволюции.', s:155 },
+  { c:p=>p.reg>=35, e:'🐢', n:'Долгожитель', d:'Живёт веками.', s:135 },
+  { c:p=>p.nerve>=30&&p.reg>=25, e:'🐬', n:'Социальный', d:'Живёт в стае.', s:125 },
+  { c:p=>p.energy>=45&&p.nerve<15, e:'🌳', n:'Растительная форма', d:'Фотосинтез вместо мозга.', s:110 },
+  { c:p=>p.struct>=50, e:'🐙', n:'Многоклеточный гигант', d:'Огромное тело.', s:170 },
+  { c:p=>p.energy>=35&&p.nerve>=25, e:'🐦', n:'Летающая форма', d:'Покоряет небо.', s:160 },
+  { c:p=>p.energy>=35&&p.reg>=30, e:'🌿', n:'Фотосинтетик', d:'Питается светом.', s:130 },
+  { c:p=>p.struct>=35&&p.nerve<10, e:'🦔', n:'Защищённый', d:'Броня без разума.', s:40 },
+  { c:p=>p.struct>=25&&p.nerve<15, e:'🐛', n:'Примитив', d:'Простейшее существо.', s:40 },
+  { c:p=>p.energy>=25&&p.struct<15, e:'👁️', n:'Паразит', d:'Живёт за чужой счёт.', s:35 },
+  { c:p=>p.reg>=20&&p.struct<15, e:'🌀', n:'Хаос', d:'Нестабильная форма.', s:20 },
+  { c:p=>p.energy<5&&p.struct>=20, e:'🧟', n:'Нежить', d:'Квази-жизнь.', s:10 },
+  { c:p=>p.energy>=20&&p.reg<10, e:'🪰', n:'Мимолётный', d:'Живёт мгновение.', s:20 },
+  { c:p=>p.all>=15&&p.all<=25, e:'🦠', n:'Спящий', d:'Едва теплится.', s:50 },
+  { c:p=>p.struct>=40&&p.nerve<15, e:'🐚', n:'Раковинный', d:'Панцирь вместо мозга.', s:35 },
+  { c:p=>p.energy>=40&&p.struct<15, e:'🐡', n:'Раздутый', d:'Много энергии, мало тела.', s:15 },
+  { c:p=>p.energy>=70, e:'🔥', n:'Самовозгорание', d:'Перегрелся и сгорел.', s:-20 },
+  { c:p=>p.struct>=50&&p.energy<5&&p.nerve<5, e:'🧊', n:'Кристаллизация', d:'Застыл навсегда.', s:5 },
+  { c:p=>p.energy>=20&&p.struct<5, e:'🫠', n:'Распад', d:'Растворился в среде.', s:0 },
+  { c:p=>p.nerve>=20&&p.struct<5, e:'👻', n:'Призрак', d:'Сознание без тела.', s:10 },
+  { c:p=>p.dead>=3, e:'☠️', n:'Отравление', d:'Мёртвые клетки убили.', s:-10 },
+  { c:p=>p.mutagens>=4, e:'🧨', n:'Цепная реакция', d:'Мутации вышли из-под контроля.', s:-60 },
+  { c:p=>p.mutagens>=3&&p.reg<10, e:'🦠', n:'Зараза', d:'Организм вышел из-под контроля.', s:-30 },
+  { c:p=>p.energy<5&&p.reg<5, e:'🌫️', n:'Испарение', d:'Исчез бесследно.', s:0 },
+];
+
+const ACHIEVEMENTS = [
+  { id:'first',   n:'Первый шаг',        d:'Сыграй первую партию' },
+  { id:'dragon',  n:'Укротитель',       d:'Вырасти Дракона' },
+  { id:'absolute',n:'Совершенство',     d:'Достигни Абсолюта' },
+  { id:'nomut',   n:'Чистые руки',      d:'Победи без единой мутации' },
+  { id:'speed',   n:'Скорость света',   d:'Победи, оставив 5+ ходов' },
+  { id:'evo3',    n:'Эволюционер',      d:'Пройди 3 раунда эволюции' },
+  { id:'collect10',n:'Коллекционер',    d:'Открой 10 видов' },
+  { id:'collect30',n:'Каталогизатор',   d:'Открой 30 видов' },
+  { id:'score1000',n:'Легенда',         d:'Набери 1000+ очков' },
+  { id:'score1500',n:'Творец',          d:'Набери 1500+ очков' },
+  { id:'synergy', n:'Синергия',         d:'Получи бонус за 3 клетки подряд' },
+  { id:'comeback',n:'Феникс',           d:'Победи, когда все параметры были < 10' },
+];
+
+// ==================== СОХРАНЕНИЕ ====================
+const SAVE_KEY = 'genesis_save';
+let save = loadSave();
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    return s || { collection:{}, achievements:{}, best:null, sound:true, hint:true };
+  } catch { return { collection:{}, achievements:{}, best:null, sound:true, hint:true }; }
+}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch {} }
+
+// ==================== ЗВУК ====================
+let audioCtx = null;
+function beep(freq, dur=0.08, type='sine', vol=0.05) {
+  if (!save.sound) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = vol; g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  } catch {}
+}
+const SFX = {
+  open: ()=>beep(600,0.06,'sine',0.04),
+  good: ()=>beep(880,0.09,'sine',0.05),
+  bad:  ()=>beep(180,0.15,'sawtooth',0.05),
+  win:  ()=>{beep(660,0.1);setTimeout(()=>beep(880,0.12),100);setTimeout(()=>beep(1100,0.16),220);},
+  lose: ()=>{beep(300,0.12,'sawtooth');setTimeout(()=>beep(180,0.2,'sawtooth'),120);}
+};
+
+// ==================== СОСТОЯНИЕ ====================
+let state = {};
+let mode = 'classic';
+let evoRound = 1;
+
+function initGame(keepParams=null) {
+  const base = {
+    grid: [], energy: 130, moves: 16, mutagens: 0,
+    revealed: new Set(), alive: true,
+    params: { energy:0, struct:0, nerve:0, reg:0, dead:0, mutagens:0 },
+    turnScore: 0, lastStreak: { type:null, count:0 },
+    synergyBonus: 0, crisisShown: false
+  };
+  if (keepParams) {
+    base.params = { ...keepParams, dead:0, mutagens:0 };
+    base.moves = 14; base.energy = 110;
+  } else {
+    base.params.struct += 5;
+  }
+  state = base;
+
+  const pool = [];
+  for (let i=0;i<11;i++) pool.push('nutri');
+  for (let i=0;i<11;i++) pool.push('struct');
+  for (let i=0;i<9;i++)  pool.push('nerve');
+  for (let i=0;i<9;i++)  pool.push('reg');
+  for (let i=0;i<5;i++)  pool.push('mutagen');
+  for (let i=0;i<4;i++)  pool.push('dead');
+  while (pool.length < 49) pool.push('dead');
+  shuffle(pool);
+
+  let k = 0;
+  for (let y=0;y<7;y++) {
+    state.grid[y] = [];
+    for (let x=0;x<7;x++) {
+      if (x===3 && y===3) {
+        state.grid[y][x] = { type:'core', rev:true };
+        state.revealed.add('3,3');
+      } else {
+        state.grid[y][x] = { type: pool[k++], rev:false };
+      }
+    }
+  }
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('hRoundBox').style.display = mode==='evolution' ? '' : 'none';
+  document.getElementById('hScoreBox').style.display = mode==='evolution' ? '' : 'none';
+  render();
+  if (mode==='evolution') {
+    logMsg(`🌳 РАУНД ${evoRound}/3 — множитель ×${evoRound}`,'big');
+    logMsg('Параметры перенесены. Ходов: 14, топлива: 110.','info');
+  } else {
+    logMsg('🧬 Эксперимент начат. Ядро активировано.','big');
+    logMsg('Цель: ⚡28 🦴22 🧠18 ⚖️14 за 16 ходов.','');
+  }
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} }
+
+// ==================== ЛОГИКА ====================
+function neighbors(x,y) {
+  const r=[];
+  [[0,-1],[0,1],[-1,0],[1,0]].forEach(([dx,dy])=>{
+    const nx=x+dx, ny=y+dy;
+    if(nx>=0&&nx<7&&ny>=0&&ny<7) r.push([nx,ny]);
+  });
+  return r;
+}
+function isOpenable(x,y) {
+  if (state.revealed.has(x+','+y)) return false;
+  return neighbors(x,y).some(([nx,ny])=>state.revealed.has(nx+','+ny));
+}
+
+function reveal(x,y) {
+  if (!state.alive || state.moves<=0) return;
+  if (!isOpenable(x,y)) return;
+  const cell = state.grid[y][x];
+  const info = TYPES[cell.type];
+  if (state.energy < info.cost) { logMsg('⚡ Не хватает топлива!','bad'); SFX.bad(); return; }
+
+  state.energy -= info.cost;
+  state.moves--;
+  cell.rev = true;
+  cell.pop = true;
+  state.revealed.add(x+','+y);
+  const p = state.params;
+
+  let gained = false;
+  switch(cell.type) {
+    case 'nutri':  p.energy += 12; gained=true; logMsg(`🟢 Питательная (+12 ⚡)`, 'good'); break;
+    case 'struct': p.struct += 10; gained=true; logMsg(`🔵 Структурная (+10 🦴)`, 'good'); break;
+    case 'nerve':  p.nerve  += 9;  gained=true; logMsg(`🟣 Нервная (+9 🧠)`, 'good'); break;
+    case 'reg':    p.reg    += 8;  gained=true; logMsg(`🟡 Регуляторная (+8 ⚖️)`, 'good'); break;
+    case 'dead':   p.dead++; state.energy -= 5; logMsg(`⚫ Мёртвая клетка (−5 топлива)`, 'bad'); SFX.bad(); break;
+    case 'mutagen': {
+      state.mutagens++; p.mutagens++;
+      const r = Math.random();
+      if (r < 0.5) {
+        const keys=['energy','struct','nerve','reg'];
+        const k = keys[Math.floor(Math.random()*4)];
+        p[k] += 10;
+        logMsg(`🔴 Мутация! +10 к ${k}`, 'good');
+      } else if (r < 0.8) {
+        logMsg(`🔴 Мутаген нейтрализован.`, 'info');
+      } else {
+        state.energy -= 15;
+        logMsg(`💥 Мутация! −15 топлива`, 'bad');
+        SFX.bad();
+        shakeBoard();
+      }
+      break;
+    }
+  }
+  if (gained) SFX.good(); else SFX.open();
+
+  if (TYPES[cell.type].key) {
+    if (state.lastStreak.type === cell.type) state.lastStreak.count++;
+    else { state.lastStreak.type = cell.type; state.lastStreak.count = 1; }
+    if (state.lastStreak.count === 3) {
+      state.synergyBonus += 15;
+      state.energy += 10;
+      logMsg('✨ СИНЕРГИЯ! +15 очков, +10 топлива','big');
+      beep(1200,0.12,'sine',0.06);
+      unlockAch('synergy');
+    }
+  } else {
+    state.lastStreak = { type:null, count:0 };
+  }
+
+  if ((16 - state.moves) % 4 === 0 && state.moves > 0 && !state.crisisShown && (16 - state.moves) === 8) {
+    showCrisis();
+  } else if ((16 - state.moves) % 4 === 0 && state.moves > 0) {
+    randomEvent();
+  }
+
+  if (state.energy < 0) state.energy = 0;
+  if (state.moves <= 0) finish();
+  render();
+}
+
+function randomEvent() {
+  const roll = Math.floor(Math.random()*6);
+  switch(roll) {
+    case 0: state.energy += 15; logMsg('💡 Озарение: +15 топлива','good'); break;
+    case 1: state.energy -= 10; logMsg('🌪️ Сбой питания: −10 топлива','bad'); break;
+    case 2: state.params.reg += 5; logMsg('🧲 Притяжение: +5 баланса','good'); break;
+    case 3: state.mutagens++; state.params.mutagens++; logMsg('🧫 Загрязнение: +1 мутаген','info'); break;
+    case 4: state.energy += 8; state.params.nerve += 3; logMsg('🌟 Вспышка: +8 топлива, +3 разума','good'); break;
+    case 5: state.params.struct += 4; logMsg('🔬 Находка: +4 структуры','good'); break;
+  }
+}
+
+function showCrisis() {
+  state.crisisShown = true;
+  document.getElementById('mEmoji').textContent = '⚠️';
+  document.getElementById('mTitle').textContent = 'КРИЗИС';
+  document.getElementById('mDesc').textContent =
+    'Загрязнение среды!\n\n🧪 Стабилизатор — +15 к параметру, −10 топлива\n🔥 Рискнуть — 50%: +25, 50%: −20 топлива';
+  document.getElementById('mMult').textContent = '';
+  document.getElementById('mScore').textContent = '';
+  document.getElementById('mRank').textContent = '';
+  const btn = document.getElementById('mBtn');
+  btn.textContent = '🧪 Стабилизатор';
+  btn.onclick = () => {
+    state.energy -= 10;
+    const k = ['energy','struct','nerve','reg'][Math.floor(Math.random()*4)];
+    state.params[k] += 15;
+    logMsg(`🧪 Стабилизатор: +15 к ${k}, −10 топлива`,'good');
+    closeModal(); render();
+  };
+  let riskBtn = document.getElementById('riskBtn');
+  if (!riskBtn) {
+    riskBtn = document.createElement('button');
+    riskBtn.id = 'riskBtn';
+    riskBtn.className = 'danger';
+    riskBtn.style.cssText = 'width:100%; margin-top:8px;';
+    document.querySelector('.modal').appendChild(riskBtn);
+  }
+  riskBtn.style.display = 'block';
+  riskBtn.textContent = '🔥 Рискнуть (50/50)';
+  riskBtn.onclick = () => {
+    if (Math.random() < 0.5) {
+      const k = ['energy','struct','nerve','reg'][Math.floor(Math.random()*4)];
+      state.params[k] += 25;
+      logMsg(`🔥 Риск удался! +25 к ${k}`,'good');
+    } else {
+      state.energy -= 20;
+      logMsg('💥 Риск не удался! −20 топлива','bad');
+    }
+    closeModal(); render();
+  };
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('show');
+  const rb = document.getElementById('riskBtn');
+  if (rb) rb.style.display = 'none';
+  document.getElementById('mBtn').onclick = () => {
+    closeModal();
+    if (state.alive === false && mode === 'evolution') {
+      if (state.failedEvo) { resetEvo(); initGame(); }
+      else { nextEvoRound(); }
+    } else if (state.alive === false) {
+      initGame();
+    }
+  };
+}
+
+function passTurn() {
+  if (!state.alive || state.moves<=0) return;
+  state.moves--;
+  state.energy += 3;
+  logMsg('⏳ Пас: +3 топлива','info');
+  state.lastStreak = { type:null, count:0 };
+  if (state.moves<=0) finish();
+  render();
+}
+
+function shakeBoard() {
+  const b = document.getElementById('board');
+  b.classList.add('shake');
+  setTimeout(()=>b.classList.remove('shake'), 300);
+}
+
+// ==================== ФИНАЛ ====================
+function finish() {
+  state.alive = false;
+  const p = state.params;
+  const fail = p.energy<NEEDS.energy || p.struct<NEEDS.struct || p.nerve<NEEDS.nerve || p.reg<NEEDS.reg;
+
+  let outcome;
+  if (fail) {
+    state.failedEvo = true;
+    outcome = OUTCOMES.find(o => o.s<=0 && o.c(p)) ||
+              { e:'💀', n:'Гибель', d:'Параметр ниже нормы. Эксперимент провален.', s:0 };
+  } else {
+    state.failedEvo = false;
+    outcome = OUTCOMES.find(o => o.s>0 && o.c(p)) ||
+              { e:'🎉', n:'Жизнь создана', d:'Все параметры в норме!', s:100 };
+  }
+
+  let score = outcome.s;
+  const paramBonus = (p.energy+p.struct+p.nerve+p.reg - 90) * 2;
+  const speedBonus = state.moves * 15;
+  const penalty = state.mutagens * 10 + p.dead * 5;
+  score += paramBonus + speedBonus - penalty + state.synergyBonus;
+
+  let mult = 1;
+  if (mode === 'evolution') { mult = evoRound; score *= mult; }
+
+  let rank;
+  if (score>=1500) rank='🧬 Творец жизни (S+)';
+  else if (score>=1000) rank='👑 Генетик-легенда (S)';
+  else if (score>=700) rank='🔬 Профессор (A)';
+  else if (score>=400) rank='🧪 Лаборант (B)';
+  else if (score>=200) rank='🎓 Стажёр (C)';
+  else if (score>=0) rank='🥼 Практикант (D)';
+  else rank='💀 Утилизатор чашек (F)';
+
+  save.collection[outcome.n] = true;
+  if (!fail) unlockAch('first');
+  if (outcome.n==='Дракон') unlockAch('dragon');
+  if (outcome.n==='Абсолют') unlockAch('absolute');
+  if (!fail && state.mutagens===0) unlockAch('nomut');
+  if (!fail && state.moves>=5) unlockAch('speed');
+  if (!fail && score>=1000) unlockAch('score1000');
+  if (!fail && score>=1500) unlockAch('score1500');
+  const collected = Object.keys(save.collection).length;
+  if (collected>=10) unlockAch('collect10');
+  if (collected>=30) unlockAch('collect30');
+  if (mode==='evolution' && evoRound===3 && !fail) unlockAch('evo3');
+  if (!save.best || score > save.best.score) {
+    save.best = { score, outcome:outcome.n, emoji:outcome.e, rank, date:Date.now() };
+  }
+  persist();
+
+  if (!fail) SFX.win(); else SFX.lose();
+
+  document.getElementById('mEmoji').textContent = outcome.e;
+  document.getElementById('mTitle').textContent = outcome.n;
+  document.getElementById('mDesc').textContent = outcome.d +
+    `\n\n⚡${p.energy} 🦴${p.struct} 🧠${p.nerve} ⚖️${p.reg}` +
+    (state.synergyBonus ? `\n✨ Синергия: +${state.synergyBonus}` : '');
+  document.getElementById('mMult').textContent = mode==='evolution' ? `🌳 Эволюция ×${mult}` : '';
+  document.getElementById('mScore').textContent = score;
+  document.getElementById('mRank').textContent = rank;
+  const btn = document.getElementById('mBtn');
+  const rb = document.getElementById('riskBtn');
+  if (rb) rb.style.display = 'none';
+
+  if (mode === 'evolution' && !fail) {
+    if (evoRound < 3) {
+      btn.textContent = `🌳 Раунд ${evoRound+1} (×${evoRound+1})`;
+      btn.onclick = () => { closeModal(); nextEvoRound(); };
+    } else {
+      btn.textContent = '🏆 Эволюция завершена!';
+      btn.onclick = () => { closeModal(); resetEvo(); };
+    }
+  } else if (mode === 'evolution' && fail) {
+    btn.textContent = '💀 Эволюция прервана';
+    btn.onclick = () => { closeModal(); resetEvo(); };
+  } else {
+    btn.textContent = 'Сыграть ещё раз';
+    btn.onclick = () => { closeModal(); initGame(); };
+  }
+  document.getElementById('modalBg').classList.add('show');
+  renderTabs();
+}
+
+function nextEvoRound() { evoRound++; initGame(state.params); }
+function resetEvo() {
+  evoRound = 1; mode = 'classic';
+  document.getElementById('hRoundBox').style.display = 'none';
+  document.getElementById('hScoreBox').style.display = 'none';
+  initGame();
+}
+
+function unlockAch(id) {
+  if (save.achievements[id]) return;
+  save.achievements[id] = true;
+  persist();
+  logMsg(`🎖️ Достижение: ${ACHIEVEMENTS.find(a=>a.id===id)?.n}`,'big');
+  beep(1400,0.15,'sine',0.06);
+}
+
+// ==================== РЕНДЕР ====================
+function render() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  for (let y=0;y<7;y++) {
+    for (let x=0;x<7;x++) {
+      const cell = state.grid[y][x];
+      const el = document.createElement('div');
+      el.className = 'cell';
+      if (cell.rev) {
+        el.classList.add('revealed');
+        if (cell.type==='core') { el.classList.add('core'); el.textContent='🧬'; }
+        else {
+          const t=TYPES[cell.type]; el.classList.add(t.css); el.textContent=t.icon;
+          if (cell.pop) { el.classList.add('pop'); cell.pop=false; }
+        }
+      } else if (!state.alive) {
+        el.classList.add('locked');
+      } else if (isOpenable(x,y)) {
+        el.classList.add('openable');
+        if (save.hint) {
+          const t = TYPES[cell.type];
+          el.textContent = t.hint;
+          el.classList.add('hint-type');
+        } else {
+          el.textContent = '?';
+        }
+        el.onclick = () => reveal(x,y);
+      } else {
+        el.classList.add('locked');
+      }
+      board.appendChild(el);
+    }
+  }
+  const p = state.params;
+  document.getElementById('hEnergy').textContent = state.energy;
+  document.getElementById('hMoves').textContent = state.moves;
+  document.getElementById('hMut').textContent = state.mutagens;
+  document.getElementById('energyBar').style.width = Math.min(100, state.energy/130*100) + '%';
+  document.getElementById('hMoves').parentElement.className = 'stat ' + (state.moves<=3?'warn':'');
+
+  const totalScore = state.turnScore + state.synergyBonus;
+  document.getElementById('hScore').textContent = mode==='evolution' ? `${totalScore}×${evoRound}` : totalScore;
+  if (mode==='evolution') document.getElementById('hRound').textContent = `${evoRound}/3`;
+
+  updatePBar('pb-energy', p.energy, NEEDS.energy);
+  updatePBar('pb-struct', p.struct, NEEDS.struct);
+  updatePBar('pb-nerve',  p.nerve,  NEEDS.nerve);
+  updatePBar('pb-reg',    p.reg,    NEEDS.reg);
+}
+
+function updatePBar(id, val, need) {
+  const el = document.getElementById(id);
+  el.querySelector('.top b').textContent = val;
+  const pct = Math.min(100, val/need*100);
+  el.querySelector('.fill').style.width = pct + '%';
+  el.classList.toggle('done', val >= need);
+}
+
+function logMsg(text, cls) {
+  const log = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = cls || '';
+  d.textContent = '› ' + text;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ==================== ВКЛАДКИ ====================
+function renderTabs() {
+  const all = OUTCOMES.filter(o=>o.n);
+  const col = document.getElementById('collection');
+  col.innerHTML = '';
+  all.forEach(o => {
+    const d = document.createElement('div');
+    d.className = 'col-item' + (save.collection[o.n]?' found':'') + (o.rare?' rare':'');
+    d.innerHTML = `<span class="e">${o.e}</span>${o.n}`;
+    col.appendChild(d);
+  });
+  document.getElementById('colProgress').textContent =
+    `Открыто: ${Object.keys(save.collection).length} / ${all.length}`;
+
+  const a = document.getElementById('achList');
+  a.innerHTML = '';
+  ACHIEVEMENTS.forEach(ach => {
+    const done = save.achievements[ach.id];
+    const d = document.createElement('div');
+    d.className = 'ach' + (done?' done':'');
+    d.innerHTML = `<span>${ach.n} — ${ach.d}</span><span class="tick">${done?'✓':'○'}</span>`;
+    a.appendChild(d);
+  });
+
+  const b = document.getElementById('bestBox');
+  if (save.best) {
+    b.innerHTML = `🏆 <b>Лучший результат</b><br>
+      ${save.best.emoji} ${save.best.outcome}<br>
+      Очки: <b>${save.best.score}</b><br>
+      Ранг: ${save.best.rank}<br>
+      <span style="color:#5a7a8a;font-size:.7rem">${new Date(save.best.date).toLocaleString()}</span>`;
+  } else {
+    b.textContent = 'Пока нет рекордов. Сыграй партию!';
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+    renderTabs();
+  };
+});
+
+// ==================== НАСТРОЙКИ ====================
+document.getElementById('optSound').checked = save.sound;
+document.getElementById('optHint').checked = save.hint;
+document.getElementById('optSound').onchange = e => { save.sound = e.target.checked; persist(); };
+document.getElementById('optHint').onchange = e => { save.hint = e.target.checked; persist(); render(); };
+document.getElementById('btnWipe').onclick = () => {
+  if (confirm('Стереть весь прогресс?')) {
+    save = { collection:{}, achievements:{}, best:null, sound:save.sound, hint:save.hint };
+    persist(); renderTabs(); initGame();
+  }
+};
+
+// ==================== ЗАПУСК ====================
+document.getElementById('btnPass').onclick = passTurn;
+document.getElementById('btnRestart').onclick = () => { if (mode==='evolution') resetEvo(); else initGame(); };
+document.getElementById('btnEvo').onclick = () => {
+  if (mode==='evolution') { resetEvo(); document.getElementById('btnEvo').textContent='🌳 Эволюция'; }
+  else { mode='evolution'; evoRound=1; initGame();
+         document.getElementById('btnEvo').textContent='🚪 Выйти'; }
+};
+
+// разблокировка аудио по первому тапу (iOS)
+document.body.addEventListener('touchstart', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { once:true, passive:true });
+
+initGame();
+renderTabs();
+</script>
+</body>
+</html>
